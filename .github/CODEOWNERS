@@ -1,0 +1,5 @@
+# Responsáveis pela revisão de cada área. O GitHub pede revisão a eles automaticamente.
+# Por enquanto, um único responsável; quando o time entrar no repositório, separar por área:
+#   /.github/  e  /infra/          → quem cuida da AWS e do CI
+#   /src/  (contratos da API)       → direção de produto
+*  @Rodriguessz

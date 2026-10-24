@@ -7,8 +7,8 @@ ERP mobile-first para feirantes e vendedores permissionários. Este repositório
 | 1 | API NestJS mínima + Docker Compose (API + PostgreSQL) | ✅ |
 | 2 | Testes básicos (unitário e de integração com o banco) | ✅ |
 | 3 | Pipeline de CI no GitHub Actions | ✅ |
-| 4 | Proteção da `main` e regras de PR | Próxima |
-| 5 | Documento explicando o conjunto | — |
+| 4 | Proteção da `main` e regras de PR | ✅ |
+| 5 | Documento explicando o conjunto | Próxima |
 
 ## Como rodar
 
@@ -99,6 +99,14 @@ Os três rodam em paralelo, cada um numa máquina nova. Para reproduzir um job l
 | `ambiente-reproduzivel` | `docker compose up --build -d --wait api` e `curl localhost:3000/api/health/ready` |
 
 O `package.json` tem um `overrides` que força o `multer` 2.5.0. O `@nestjs/platform-express` fixa a 2.4.0, que tem uma vulnerabilidade alta de negação de serviço ([GHSA-q7qp-rjg7-q26m](https://github.com/advisories/GHSA-q7qp-rjg7-q26m)). Remova o override quando o NestJS publicar uma versão com a correção.
+
+## Como contribuir
+
+Branches, commits e Pull Requests seguem o [`CONTRIBUTING.md`](CONTRIBUTING.md). Resumo:
+
+- Branch: `<tipo>/<descricao>`, ex.: `feat/vendas-pedido-duplicado`
+- Título do PR: `tipo(area): descrição`, ex.: `feat(pedidos): registra pedido`
+- A `main` é protegida: só recebe mudanças por PR, com os 4 checks verdes (`padroes-do-pr`, `qualidade`, `integracao` e `ambiente-reproduzivel`)
 
 ## O que cada arquivo faz
 
