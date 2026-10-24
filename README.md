@@ -6,8 +6,8 @@ ERP mobile-first para feirantes e vendedores permissionários. Este repositório
 |---|---|---|
 | 1 | API NestJS mínima + Docker Compose (API + PostgreSQL) | ✅ |
 | 2 | Testes básicos (unitário e de integração com o banco) | ✅ |
-| 3 | Pipeline de CI no GitHub Actions | Próxima |
-| 4 | Proteção da `main` e regras de PR | — |
+| 3 | Pipeline de CI no GitHub Actions | ✅ |
+| 4 | Proteção da `main` e regras de PR | Próxima |
 | 5 | Documento explicando o conjunto | — |
 
 ## Como rodar
@@ -79,6 +79,26 @@ O teste de integração **aplica as migrations sozinho** e cria a própria barra
 `src/app.setup.ts` guarda a configuração da aplicação (o prefixo `/api`). Ele é usado tanto pelo `main.ts` quanto pelo teste de integração, para que o teste exercite exatamente a API real.
 
 Convenção de nomes: `*.spec.ts` ao lado do código para unitários; `test/*.integration-spec.ts` para integração. Nenhum dos dois entra na imagem Docker (`tsconfig.build.json` exclui os testes).
+
+## Integração contínua (CI)
+
+O workflow `.github/workflows/ci.yml` roda sozinho em **todo Pull Request para a `main`** e em **todo push na `main`**. Cada job vira um *check* no PR (✓ ou ✕):
+
+| Job | O que verifica |
+|---|---|
+| `qualidade` | Segredos vazados (gitleaks), lint, tipos, testes unitários, dependências vulneráveis (`npm audit`) e build |
+| `integracao` | Migrations num PostgreSQL + PostGIS vazio (aplicar, reverter e aplicar de novo) e testes de integração |
+| `ambiente-reproduzivel` | Sobe o `docker compose` do zero numa máquina limpa e testa a API por HTTP |
+
+Os três rodam em paralelo, cada um numa máquina nova. Para reproduzir um job localmente:
+
+| Job | Comandos |
+|---|---|
+| `qualidade` | `npm ci && npm run lint && npm run typecheck && npm test && npm audit --omit=dev && npm run build` |
+| `integracao` | `docker compose up -d db`, depois `npm run migration:run && npm run test:integration` |
+| `ambiente-reproduzivel` | `docker compose up --build -d --wait api` e `curl localhost:3000/api/health/ready` |
+
+O `package.json` tem um `overrides` que força o `multer` 2.5.0. O `@nestjs/platform-express` fixa a 2.4.0, que tem uma vulnerabilidade alta de negação de serviço ([GHSA-q7qp-rjg7-q26m](https://github.com/advisories/GHSA-q7qp-rjg7-q26m)). Remova o override quando o NestJS publicar uma versão com a correção.
 
 ## O que cada arquivo faz
 
