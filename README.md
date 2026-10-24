@@ -1,6 +1,6 @@
 # Caxi — monólito
 
-ERP mobile-first para feirantes e vendedores permissionários. Este repositório contém a **API** do Caxi (NestJS + PostgreSQL/PostGIS), construída em etapas, cada uma entregue por Pull Request:
+ERP mobile-first para feirantes e vendedores permissionários (MVP). Este repositório contém a **API** do Caxi (NestJS + PostgreSQL/PostGIS), construída em etapas, cada uma entregue por Pull Request:
 
 | Etapa | Conteúdo | Situação |
 |---|---|---|
