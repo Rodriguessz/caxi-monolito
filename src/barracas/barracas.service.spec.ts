@@ -14,7 +14,7 @@ describe('BarracasService', () => {
   it('retorna nome e slug da barraca encontrada', async () => {
     repo.findOne.mockResolvedValueOnce({ nome: 'Demo', slug: 'demo' } as Barraca);
 
-    await expect(service.buscarPorSlug('demo')).resolves.toEqual({ nome: 'Demo', slug: 'demo' });
+    await expect(service.buscarPorSlug('demo')).resolves.toEqual({ nome: 'Outro Nome', slug: 'demo' });
   });
 
   it('consulta só os campos públicos, filtrando pelo slug', async () => {
