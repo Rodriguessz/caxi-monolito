@@ -1,0 +1,48 @@
+# Ambiente local reproduzível do Caxi: banco, migrations e API.
+# Uso: docker compose up --build -d   →   curl localhost:3000/api/health/ready
+name: caxi
+
+x-api: &api
+  build: .
+  image: caxi-api:local
+  environment:
+    DATABASE_URL: postgres://${POSTGRES_USER:-caxi}:${POSTGRES_PASSWORD:-caxi_dev}@db:5432/${POSTGRES_DB:-caxi}
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-caxi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-caxi_dev}   # credencial local descartável
+      POSTGRES_DB: ${POSTGRES_DB:-caxi}
+    ports: ["5432:5432"]
+    volumes: [db-data:/var/lib/postgresql/data]
+    healthcheck:
+      # Testa por TCP (-h 127.0.0.1): na primeira inicialização, a imagem sobe um servidor
+      # temporário só com socket local; checar pelo socket daria "pronto" cedo demais.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Roda as migrations e o seed uma vez e encerra
+  migrate:
+    <<: *api
+    command: ["sh", "-c", "npm run migration:run:prod && npm run seed:prod"]
+    depends_on:
+      db: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    <<: *api
+    ports: ["${API_PORT:-3000}:3000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  db-data:
