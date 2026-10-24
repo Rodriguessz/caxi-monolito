@@ -1,0 +1,47 @@
+name: padroes-pr
+on:
+  pull_request:
+    branches: [main]
+    # "edited" reexecuta a validação quando alguém corrige o título do PR
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  padroes-do-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Nome da branch e título do PR
+        env:
+          # Lidos por variável de ambiente, nunca interpolados no script (evita injeção de comando)
+          BRANCH: ${{ github.head_ref }}
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          tipos='feat|fix|chore|docs|test|refactor|infra|ci'
+          erros=0
+
+          # PRs do Dependabot seguem o padrão de nome e título do próprio GitHub
+          if [[ "$BRANCH" =~ ^dependabot/ ]]; then
+            echo "PR do Dependabot: nome e título não validados."
+            exit 0
+          fi
+
+          if [[ ! "$BRANCH" =~ ^($tipos)/[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+            echo "::error title=Nome de branch fora do padrão::'$BRANCH' deve ser <tipo>/<descricao-em-kebab-case>, com tipo em: ${tipos//|/, }. Ex.: feat/vendas-pedido-duplicado"
+            erros=1
+          else
+            echo "✔ Branch: $BRANCH"
+          fi
+
+          if [[ ! "$TITLE" =~ ^($tipos)(\([a-z0-9-]+\))?!?:\ [^[:space:]].*$ ]]; then
+            echo "::error title=Título fora do Conventional Commits::'$TITLE' deve ser <tipo>(<area>): <descrição>. Ex.: feat(pedidos): registra pedido do comprador"
+            erros=1
+          elif (( ${#TITLE} > 72 )); then
+            echo "::error title=Título longo demais::O título tem ${#TITLE} caracteres; o limite é 72, porque ele vira a mensagem do commit na main."
+            erros=1
+          else
+            echo "✔ Título: $TITLE"
+          fi
+
+          exit $erros
