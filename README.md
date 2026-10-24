@@ -5,8 +5,8 @@ ERP mobile-first para feirantes e vendedores permissionários. Este repositório
 | Etapa | Conteúdo | Situação |
 |---|---|---|
 | 1 | API NestJS mínima + Docker Compose (API + PostgreSQL) | ✅ |
-| 2 | Testes básicos (unitário e de integração com o banco) | Próxima |
-| 3 | Pipeline de CI no GitHub Actions | — |
+| 2 | Testes básicos (unitário e de integração com o banco) | ✅ |
+| 3 | Pipeline de CI no GitHub Actions | Próxima |
 | 4 | Proteção da `main` e regras de PR | — |
 | 5 | Documento explicando o conjunto | — |
 
@@ -50,6 +50,35 @@ docker compose up
 ```
 
 Cada serviço só começa quando o anterior está pronto (`depends_on` com `condition`). Assim, a API nunca sobe contra um banco sem tabelas.
+
+## Testes
+
+Exigem Node 22 (`.nvmrc`) e `npm ci` uma vez.
+
+| Tipo | Comando | Precisa de banco? | O que prova |
+|---|---|---|---|
+| **Unitário** | `npm test` | Não | A lógica de cada classe, isolada. O banco é substituído por um *mock* |
+| **Integração** | `docker compose up -d db` e depois `npm run test:integration` | Sim | A API inteira funcionando contra um PostgreSQL real, com requisições HTTP de verdade |
+| Cobertura | `npm run test:cov` | Não | Quais linhas os testes unitários executam (relatório em `coverage/`) |
+
+### Por que dois tipos
+
+- **Unitários** rodam em milissegundos e apontam exatamente qual classe quebrou. Mas, com o banco simulado, não pegam erro de SQL, de migration ou de configuração.
+- **Integração** sobe o NestJS completo (módulos, TypeORM, rotas, prefixo `/api`) e conversa com o PostgreSQL. Pegam o que o unitário não vê, mas são mais lentos e dependem do banco.
+
+### O que está coberto
+
+| Arquivo | Tipo | Casos |
+|---|---|---|
+| `src/barracas/barracas.service.spec.ts` | Unitário | Retorna a barraca; consulta só os campos públicos filtrando pelo slug; lança 404 se não existir |
+| `src/health/health.controller.spec.ts` | Unitário | `live` não toca no banco; `ready` faz ping no banco com timeout de 1,5 s |
+| `test/api.integration-spec.ts` | Integração | `/api/health/live` e `/api/health/ready` respondem 200; `/api/barracas/:slug` devolve só `nome` e `slug` de um registro gravado no banco; slug inexistente devolve 404; a migration habilitou o PostGIS |
+
+O teste de integração **aplica as migrations sozinho** e cria a própria barraca com um slug único, que apaga no fim. Por isso não depende do seed e pode rodar várias vezes no mesmo banco.
+
+`src/app.setup.ts` guarda a configuração da aplicação (o prefixo `/api`). Ele é usado tanto pelo `main.ts` quanto pelo teste de integração, para que o teste exercite exatamente a API real.
+
+Convenção de nomes: `*.spec.ts` ao lado do código para unitários; `test/*.integration-spec.ts` para integração. Nenhum dos dois entra na imagem Docker (`tsconfig.build.json` exclui os testes).
 
 ## O que cada arquivo faz
 
