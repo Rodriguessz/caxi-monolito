@@ -8,7 +8,11 @@ ERP mobile-first para feirantes e vendedores permissionários. Este repositório
 | 2 | Testes básicos (unitário e de integração com o banco) | ✅ |
 | 3 | Pipeline de CI no GitHub Actions | ✅ |
 | 4 | Proteção da `main` e regras de PR | ✅ |
-| 5 | Documento explicando o conjunto | Próxima |
+| 5 | Documento explicando o conjunto | ✅ |
+
+## Arquitetura
+
+![Arquitetura do Caxi na AWS](docs/arquitetura/caxi-arquitetura.svg)
 
 ## Como rodar
 
