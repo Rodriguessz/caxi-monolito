@@ -1,6 +1,6 @@
 # Caxi — monólito
 
-ERP mobile-first para feirantes e vendedores permissionários. Este repositório contém a **API** do Caxi (NestJS + PostgreSQL/PostGIS), construída em etapas, cada uma entregue por Pull Request:
+ERP mobile-first para feirantes e vendedores permissionários. Este repositório contém a **API** do Caxi (NestJS + PostgreSQL/PostGIS) e o **front** (React + Vite, em `web/`), construídos em etapas, cada uma entregue por Pull Request:
 
 | Etapa | Conteúdo | Situação |
 |---|---|---|
@@ -24,10 +24,10 @@ cd caxi-monolito
 docker compose up --build -d
 ```
 
-A primeira vez leva alguns minutos (download das imagens e build). Depois, confira:
+A primeira vez leva alguns minutos (download das imagens e build). Depois, abra **http://localhost:8080**: a tela inicial mostra se a API e o banco estão respondendo. Pelo terminal:
 
 ```bash
-docker compose ps -a                         # db e api "Up (healthy)"; migrate "Exited (0)"
+docker compose ps -a                         # db, api e web "Up (healthy)"; migrate "Exited (0)"
 curl localhost:3000/api/health/ready         # {"status":"ok",...,"database":{"status":"up"}}
 curl localhost:3000/api/barracas/demo        # {"nome":"Barraca Demonstração (dados fictícios)","slug":"demo"}
 curl localhost:3000/api/barracas/nao-existe  # 404 "Barraca não encontrada"
@@ -50,10 +50,14 @@ docker compose up
    │
    ├─ migrate   aplica as migrations + seed, e encerra ... espera terminar com código 0
    │
-   └─ api       NestJS na porta 3000 ..................... saudável quando /api/health/live responde
+   ├─ api       NestJS na porta 3000 ..................... saudável quando /api/health/live responde
+   │
+   └─ web       nginx na porta 8080 ...................... serve o front e encaminha /api/* para a api
 ```
 
 Cada serviço só começa quando o anterior está pronto (`depends_on` com `condition`). Assim, a API nunca sobe contra um banco sem tabelas.
+
+O navegador fala só com o `web` (porta 8080). Quando o front chama `/api/...`, o nginx repassa para a API. É o mesmo desenho da AWS, onde o CloudFront entrega o front e encaminha `/api/*` para o ALB. Por isso o front usa caminhos relativos e não precisa saber o endereço da API.
 
 ## Testes
 
@@ -92,7 +96,7 @@ O workflow `.github/workflows/ci.yml` roda sozinho em **todo Pull Request para a
 |---|---|
 | `qualidade` | Segredos vazados (gitleaks), lint, tipos, testes unitários, dependências vulneráveis (`npm audit`) e build |
 | `integracao` | Migrations num PostgreSQL + PostGIS vazio (aplicar, reverter e aplicar de novo) e testes de integração |
-| `ambiente-reproduzivel` | Sobe o `docker compose` do zero numa máquina limpa e testa a API por HTTP |
+| `ambiente-reproduzivel` | Sobe o `docker compose` do zero numa máquina limpa e testa a API e o front por HTTP |
 
 Os três rodam em paralelo, cada um numa máquina nova. Para reproduzir um job localmente:
 
@@ -100,7 +104,7 @@ Os três rodam em paralelo, cada um numa máquina nova. Para reproduzir um job l
 |---|---|
 | `qualidade` | `npm ci && npm run lint && npm run typecheck && npm test && npm audit --omit=dev && npm run build` |
 | `integracao` | `docker compose up -d db`, depois `npm run migration:run && npm run test:integration` |
-| `ambiente-reproduzivel` | `docker compose up --build -d --wait api` e `curl localhost:3000/api/health/ready` |
+| `ambiente-reproduzivel` | `docker compose up --build -d --wait api web` e `curl localhost:8080/api/health/ready` |
 
 O `package.json` tem um `overrides` que força o `multer` 2.5.0. O `@nestjs/platform-express` fixa a 2.4.0, que tem uma vulnerabilidade alta de negação de serviço ([GHSA-q7qp-rjg7-q26m](https://github.com/advisories/GHSA-q7qp-rjg7-q26m)). Remova o override quando o NestJS publicar uma versão com a correção.
 
@@ -124,7 +128,10 @@ Branches, commits e Pull Requests seguem o [`CONTRIBUTING.md`](CONTRIBUTING.md).
 | `src/database/migrations/` | Migrations versionadas. A primeira habilita o PostGIS e cria a tabela `barracas` | O banco de qualquer pessoa, e o do CI, nasce igual, só a partir destes arquivos |
 | `src/database/seed.ts` | Insere uma barraca de demonstração, marcada como fictícia. Pode rodar várias vezes (`ON CONFLICT DO NOTHING`) | Ter dados para testar, sem misturar com dados reais |
 | `Dockerfile` | Imagem em 3 estágios: compila → instala só dependências de produção → imagem final rodando como usuário `node` | A imagem final fica menor, sem compilador nem código-fonte, e sem rodar como root. É a mesma imagem que irá para o ECS |
-| `docker-compose.yml` | Sobe `db`, `migrate` e `api` na ordem certa | Um comando para ter o ambiente completo |
+| `docker-compose.yml` | Sobe `db`, `migrate`, `api` e `web` na ordem certa | Um comando para ter o ambiente completo |
+| `web/` | Front em React + Vite + TypeScript, projeto separado com o próprio `package.json` | Front e API têm dependências e ferramentas diferentes; separados, um não interfere no build do outro |
+| `web/src/styles/tokens.css` | Cores, espaçamentos e raios do Design System, com os mesmos nomes das Variables do Figma | Uma mudança de cor é feita num lugar só e vale para todas as telas |
+| `web/Dockerfile` e `web/nginx.conf` | Compila o front e serve os arquivos estáticos com nginx, sem root, na porta 8080 | Na AWS os mesmos arquivos vão para o S3 atrás do CloudFront; o nginx faz esse papel localmente |
 | `.env.example` | Lista as variáveis que podem ser sobrescritas | Funciona sem `.env`; as senhas são só de desenvolvimento |
 | `.nvmrc` | Versão do Node (22) | Fonte única da versão, usada também pelo CI |
 | `package-lock.json` | Versões exatas de todas as dependências | Junto com `npm ci`, garante que todos instalem exatamente o mesmo |
@@ -147,4 +154,12 @@ npm ci
 docker compose up -d db
 npm run migration:run && npm run seed
 npm run dev        # http://localhost:3000/api
+```
+
+Para o front com recarga automática, em outro terminal (com a API rodando, no Docker ou no host):
+
+```bash
+cd web
+npm ci
+npm run dev        # http://localhost:5173, com /api encaminhado para localhost:3000
 ```

@@ -96,14 +96,20 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Subir com Docker Compose (build da imagem + db + migrate + api)
-        run: docker compose up --build -d --wait api
+      - name: Subir com Docker Compose (build das imagens + db + migrate + api + web)
+        run: docker compose up --build -d --wait api web
 
       - name: Smoke test por HTTP
         run: |
           curl -fsS --retry 10 --retry-delay 2 --retry-connrefused http://localhost:3000/api/health/ready
           curl -fsS http://localhost:3000/api/barracas/demo | grep -q '"slug":"demo"'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/api/barracas/nao-existe)" = 404
+
+      - name: Smoke test do front (SPA e encaminhamento de /api pelo nginx)
+        run: |
+          curl -fsS http://localhost:8080/ | grep -q '<div id="root">'
+          curl -fsS http://localhost:8080/uma-rota-da-spa | grep -q '<div id="root">'
+          curl -fsS http://localhost:8080/api/barracas/demo | grep -q '"slug":"demo"'
 
       - name: Logs dos containers (só se algo falhar)
         if: failure()
