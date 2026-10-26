@@ -130,6 +130,7 @@ Branches, commits e Pull Requests seguem o [`CONTRIBUTING.md`](CONTRIBUTING.md).
 | `Dockerfile` | Imagem em 3 estágios: compila → instala só dependências de produção → imagem final rodando como usuário `node` | A imagem final fica menor, sem compilador nem código-fonte, e sem rodar como root. É a mesma imagem que irá para o ECS |
 | `docker-compose.yml` | Sobe `db`, `migrate`, `api` e `web` na ordem certa | Um comando para ter o ambiente completo |
 | `web/` | Front em React + Vite + TypeScript, projeto separado com o próprio `package.json` | Front e API têm dependências e ferramentas diferentes; separados, um não interfere no build do outro |
+| `web/src/components/` | Componentes do Design System em React: `Button`, `Field`, `Notice`, `QuantityControl`, `ChoiceGroup` e `StepProgress`. A vitrine com todos os estados fica em http://localhost:8080/design-system | As telas montam a interface só com esses componentes, como no Figma; mudar um componente muda todas as telas |
 | `web/src/styles/tokens.css` | Cores, espaçamentos e raios do Design System, com os mesmos nomes das Variables do Figma | Uma mudança de cor é feita num lugar só e vale para todas as telas |
 | `web/Dockerfile` e `web/nginx.conf` | Compila o front e serve os arquivos estáticos com nginx, sem root, na porta 8080 | Na AWS os mesmos arquivos vão para o S3 atrás do CloudFront; o nginx faz esse papel localmente |
 | `.env.example` | Lista as variáveis que podem ser sobrescritas | Funciona sem `.env`; as senhas são só de desenvolvimento |
