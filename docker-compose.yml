@@ -1,5 +1,5 @@
-# Ambiente local reproduzível do Caxi: banco, migrations e API.
-# Uso: docker compose up --build -d   →   curl localhost:3000/api/health/ready
+# Ambiente local reproduzível do Caxi: banco, migrations, API e front.
+# Uso: docker compose up --build -d   →   abrir http://localhost:8080
 name: caxi
 
 x-api: &api
@@ -40,6 +40,19 @@ services:
       migrate: { condition: service_completed_successfully }
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Front (SPA React) servido por nginx; /api/* é encaminhado para o serviço api
+  web:
+    build: ./web
+    image: caxi-web:local
+    ports: ["${WEB_PORT:-8080}:8080"]
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
       interval: 5s
       timeout: 3s
       retries: 20
